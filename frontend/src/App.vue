@@ -26,9 +26,8 @@
       <div class="quiz-header">
         <h2>{{ quiz?.name }}</h2>
         <div class="timer">
-          Temps restant : {{ minutesLeft }}:{{
-            secondsLeft.toString().padStart(2, "0")
-          }}
+          Temps écoulé :
+          {{ minutesElapsed }}:{{ secondsElapsed.toString().padStart(2, "0") }}
         </div>
       </div>
 
@@ -75,7 +74,6 @@
       <h2>Résultat du quiz</h2>
       <p><strong>Poste :</strong> {{ result?.jobTitle }}</p>
       <p><strong>Score :</strong> {{ result?.scorePercent.toFixed(2) }} %</p>
-      <p><strong>Statut :</strong> {{ result?.status }}</p>
       <p>
         <strong>Temps passé :</strong>
         {{ Math.floor((result?.durationSeconds || 0) / 60) }} min
@@ -110,15 +108,15 @@ const answers = ref({});
 
 const result = ref(null);
 
-const timeLeftSeconds = ref(0);
+const elapsedSeconds = ref(0);
 let timerInterval = null;
 
 const currentQuestion = computed(
   () => questions.value[currentIndex.value] || {},
 );
 
-const minutesLeft = computed(() => Math.floor(timeLeftSeconds.value / 60));
-const secondsLeft = computed(() => timeLeftSeconds.value % 60);
+const minutesElapsed = computed(() => Math.floor(elapsedSeconds.value / 60));
+const secondsElapsed = computed(() => elapsedSeconds.value % 60);
 
 const allAnswered = computed(() => {
   if (!questions.value.length) return false;
@@ -175,19 +173,14 @@ async function startQuiz() {
   questions.value = data.questions;
   answers.value = {};
   currentIndex.value = 0;
-  timeLeftSeconds.value = quiz.value.durationMinutes * 60;
+  elapsedSeconds.value = 0;
   startTimer();
 }
 
 function startTimer() {
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
-    if (timeLeftSeconds.value <= 0) {
-      clearInterval(timerInterval);
-      autoSubmitQuiz();
-    } else {
-      timeLeftSeconds.value -= 1;
-    }
+    elapsedSeconds.value += 1;
   }, 1000);
 }
 
@@ -246,7 +239,6 @@ async function submitQuiz() {
     result.value = {
       attemptId: data.attemptId,
       scorePercent: data.scorePercent,
-      status: data.status,
       durationSeconds: data.durationSeconds,
       jobTitle:
         jobs.value.find((j) => j.id === Number(selectedJobId.value))?.title ||
@@ -284,60 +276,53 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 2rem;
+  padding: 24px;
   font-family:
     system-ui,
     -apple-system,
-    BlinkMacSystemFont,
-    "SF Pro Text",
     "Segoe UI",
     sans-serif;
-  background: #ffffff;
-  color: #111827;
+  background: #f5f5f5;
+  color: #111;
 }
 
 h1 {
-  margin-bottom: 1.5rem;
+  margin-bottom: 16px;
 }
 
 .card {
-  background: #000000;
-  border-radius: 1rem;
-  padding: 2rem;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
   width: 100%;
-  max-width: 640px;
-  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.8);
-  color: #f9fafb;
+  max-width: 600px;
+  border: 1px solid #ddd;
 }
 
 .field {
-  margin-bottom: 1rem;
+  margin-bottom: 12px;
   display: flex;
   flex-direction: column;
 }
 
 label {
-  margin-bottom: 0.25rem;
-  font-weight: 500;
+  margin-bottom: 4px;
 }
 
 input,
 select {
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  border: 1px solid #334155;
-  background: #ffffff;
-  color: #111827;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
 }
 
 button {
   background: #2563eb;
-  color: white;
+  color: #fff;
   border: none;
-  border-radius: 0.5rem;
-  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  padding: 8px 16px;
   cursor: pointer;
-  font-weight: 500;
 }
 
 button:disabled {
@@ -346,33 +331,33 @@ button:disabled {
 }
 
 .error {
-  margin-top: 0.75rem;
-  color: #f97373;
+  margin-top: 8px;
+  color: #b91c1c;
 }
 
 .hint {
-  margin-bottom: 1rem;
+  margin-bottom: 12px;
   font-size: 0.9rem;
-  color: #e5e7eb;
+  color: #555;
 }
 
 .quiz-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 12px;
 }
 
 .timer {
-  padding: 0.25rem 0.75rem;
+  padding: 4px 10px;
   border-radius: 999px;
-  background: #111827;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #ddd;
   font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
 }
 
 .question h3 {
-  margin-bottom: 0.5rem;
+  margin-bottom: 8px;
 }
 
 .choices {
@@ -381,11 +366,11 @@ button:disabled {
 }
 
 .choices li {
-  margin-bottom: 0.5rem;
+  margin-bottom: 6px;
 }
 
 .quiz-navigation {
-  margin-top: 1.5rem;
+  margin-top: 16px;
   display: flex;
   justify-content: space-between;
 }

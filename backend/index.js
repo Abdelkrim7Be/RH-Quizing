@@ -485,7 +485,6 @@ app.post("/quiz/attempts/:attemptId/submit", async (req, res) => {
     }
 
     const scorePercent = (correctCount / totalQuestions) * 100;
-    const passed = scorePercent >= 70;
 
     await connection.query(
       `
@@ -500,7 +499,6 @@ app.post("/quiz/attempts/:attemptId/submit", async (req, res) => {
     );
 
     if (mailTransport) {
-      const statusLabel = passed ? "admis" : "refusé";
       try {
         await mailTransport.sendMail({
           from: process.env.MAIL_FROM,
@@ -510,7 +508,7 @@ app.post("/quiz/attempts/:attemptId/submit", async (req, res) => {
 
 Vous avez terminé le quiz pour le poste "${attempt.job_title}".
 Score: ${scorePercent.toFixed(2)}%
-Statut: ${statusLabel}
+Temps passé: ${durationSeconds} secondes
 
 Cordialement,
 L'équipe recrutement`,
@@ -525,7 +523,6 @@ L'équipe recrutement`,
     res.json({
       attemptId,
       scorePercent,
-      status: passed ? "admis" : "refusé",
       durationSeconds,
     });
   } catch (err) {
@@ -541,7 +538,7 @@ app.get("/quiz/attempts/:attemptId/result", async (req, res) => {
   try {
     const [rows] = await dbPool.query(
       `
-        SELECT a.id, a.score_percent, a.duration_seconds, a.status,
+        SELECT a.id, a.score_percent, a.duration_seconds,
                j.title as job_title
         FROM quiz_attempts a
         JOIN jobs j ON a.job_id = j.id
@@ -557,7 +554,6 @@ app.get("/quiz/attempts/:attemptId/result", async (req, res) => {
       attemptId: result.id,
       scorePercent: result.score_percent,
       durationSeconds: result.duration_seconds,
-      status: result.score_percent >= 70 ? "admis" : "refusé",
       jobTitle: result.job_title,
     });
   } catch (err) {
