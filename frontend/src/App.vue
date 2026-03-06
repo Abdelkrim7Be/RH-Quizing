@@ -99,7 +99,6 @@ const error = ref("");
 const fullName = ref("");
 const email = ref("");
 const jobs = ref([]);
-// Poste attribué automatiquement par la RH : pour l'instant on prend un exemple avec jobId = 1
 const selectedJobId = ref(1);
 
 const candidateId = ref(null);
@@ -266,9 +265,7 @@ async function autoSubmitQuiz() {
   if (step.value !== "quiz") return;
   try {
     await submitQuiz();
-  } catch {
-    // already handled
-  }
+  } catch {}
 }
 
 onMounted(() => {
@@ -292,10 +289,11 @@ onUnmounted(() => {
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
+    "SF Pro Text",
     "Segoe UI",
     sans-serif;
-  background: linear-gradient(135deg, #0f172a, #1e293b);
-  color: #e5e7eb;
+  background: #ffffff;
+  color: #111827;
 }
 
 h1 {
@@ -303,12 +301,13 @@ h1 {
 }
 
 .card {
-  background: #020617;
+  background: #000000;
   border-radius: 1rem;
   padding: 2rem;
   width: 100%;
   max-width: 640px;
   box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.8);
+  color: #f9fafb;
 }
 
 .field {
@@ -327,8 +326,8 @@ select {
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
   border: 1px solid #334155;
-  background: #020617;
-  color: #e5e7eb;
+  background: #ffffff;
+  color: #111827;
 }
 
 button {
@@ -354,7 +353,7 @@ button:disabled {
 .hint {
   margin-bottom: 1rem;
   font-size: 0.9rem;
-  color: #9ca3af;
+  color: #e5e7eb;
 }
 
 .quiz-header {
@@ -367,8 +366,8 @@ button:disabled {
 .timer {
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
-  background: #0f172a;
-  border: 1px solid #1d4ed8;
+  background: #111827;
+  border: 1px solid #e5e7eb;
   font-variant-numeric: tabular-nums;
 }
 

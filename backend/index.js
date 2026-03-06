@@ -109,19 +109,16 @@ async function initDb() {
       )
     `);
 
-    // Seed minimal data for testing if database is empty
     const [jobCountRows] = await connection.query(
       "SELECT COUNT(*) AS cnt FROM jobs",
     );
     if (jobCountRows[0].cnt === 0) {
-      // Seed a sample job
       const [jobResult] = await connection.query(
         "INSERT INTO jobs (title) VALUES (?)",
         ["Analyste Sécurité Junior"],
       );
       const jobId = jobResult.insertId;
 
-      // Seed a published quiz for this job
       const [quizResult] = await connection.query(
         `
           INSERT INTO quizzes (job_id, name, duration_minutes, questions_count, is_published)
@@ -131,7 +128,6 @@ async function initDb() {
       );
       const quizId = quizResult.insertId;
 
-      // Seed questions
       const questionsData = [
         {
           text: "Quel protocole est utilisé pour sécuriser HTTP ?",
@@ -162,9 +158,7 @@ async function initDb() {
         questionIds.push(qResult.insertId);
       }
 
-      // Seed choices for each question
       const choicesInserts = [
-        // Question 1
         {
           questionIndex: 0,
           text: "TLS/SSL",
@@ -185,7 +179,6 @@ async function initDb() {
           text: "DNS",
           isCorrect: 0,
         },
-        // Question 2
         {
           questionIndex: 1,
           text: "Filtrer le trafic réseau entrant et sortant",
@@ -206,7 +199,6 @@ async function initDb() {
           text: "Exécuter du code JavaScript",
           isCorrect: 0,
         },
-        // Question 3
         {
           questionIndex: 2,
           text: "Multi-Factor Authentication",
@@ -524,8 +516,6 @@ Cordialement,
 L'équipe recrutement`,
         });
       } catch (mailErr) {
-        // best-effort, do not fail submission
-        // eslint-disable-next-line no-console
         console.error("Error sending result email", mailErr);
       }
     }
@@ -578,12 +568,10 @@ app.get("/quiz/attempts/:attemptId/result", async (req, res) => {
 initDb()
   .then(() => {
     app.listen(PORT, () => {
-      // eslint-disable-next-line no-console
       console.log(`Backend running on port ${PORT}`);
     });
   })
   .catch((err) => {
-    // eslint-disable-next-line no-console
     console.error("Failed to initialize database", err);
     process.exit(1);
   });
