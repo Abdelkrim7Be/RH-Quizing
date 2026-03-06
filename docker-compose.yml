@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: scrum_rh_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: scrum_rh_quiz
+      MYSQL_USER: app_user
+      MYSQL_PASSWORD: app_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  backend:
+    build:
+      context: ./backend
+    container_name: scrum_rh_backend
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: app_user
+      DB_PASSWORD: app_password
+      DB_NAME: scrum_rh_quiz
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+    depends_on:
+      - mysql
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: scrum_rh_frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: http://localhost:4000
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+
+volumes:
+  mysql_data:
