@@ -1133,6 +1133,19 @@ app.put("/admin/questions/:id", async (req, res) => {
   }
 });
 
+app.delete("/admin/questions/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) {
+    return res.status(400).json({ error: "Invalid question id" });
+  }
+  try {
+    await dbPool.query("DELETE FROM questions WHERE id = ?", [id]);
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 initDb()
   .then(() => {
     app.listen(PORT, () => {
