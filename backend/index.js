@@ -838,6 +838,79 @@ app.get("/quiz/attempts/:attemptId/result", async (req, res) => {
   }
 });
 
+
+// Lister les questions d'un quiz (avec filtres simples)
+app.get("/admin/quizzes/:quizId/questions", async (req, res) => {
+  const quizId = Number(req.params.quizId);
+  const { category, level, type } = req.query;
+
+  if (!quizId) {
+    return res.status(400).json({ error: "Invalid quizId" });
+  }
+
+  try {
+    const filters = ["q.quiz_id = ?"];
+    const params = [quizId];
+
+    if (category) {
+      filters.push("q.category = ?");
+      params.push(String(category));
+    }
+    if (level) {
+      filters.push("q.level = ?");
+      params.push(String(level));
+    }
+    if (type) {
+      filters.push("q.type = ?");
+      params.push(String(type));
+    }
+
+    const whereClause = filters.join(" AND ");
+
+    const [questions] = await dbPool.query(
+      `
+      SELECT
+        q.id,
+        q.quiz_id,
+        q.text,
+        q.category,
+        q.level,
+        q.type,
+        q.created_at
+      FROM questions q
+      WHERE ${whereClause}
+      ORDER BY q.created_at DESC
+      `,
+      params,
+    );
+
+    const questionIds = questions.map((q) => q.id);
+    let choices = [];
+    if (questionIds.length > 0) {
+      const [rows] = await dbPool.query(
+        `
+        SELECT id, question_id, text, is_correct
+        FROM choices
+        WHERE question_id IN (?)
+        ORDER BY id ASC
+        `,
+        [questionIds],
+      );
+      choices = rows;
+    }
+
+    const withChoices = questions.map((q) => ({
+      ...q,
+      choices: choices.filter((c) => c.question_id === q.id),
+    }));
+
+    res.json(withChoices);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 initDb()
   .then(() => {
     app.listen(PORT, () => {
