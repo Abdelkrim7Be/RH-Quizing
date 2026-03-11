@@ -346,6 +346,7 @@ app.get("/admin/quizzes", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 app.post("/candidates", async (req, res) => {
   const { email, fullName } = req.body;
   if (!email || !fullName) {
