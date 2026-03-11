@@ -1145,7 +1145,136 @@ app.delete("/admin/questions/:id", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// Import CSV de questions pour un quiz
+app.post("/admin/quizzes/:quizId/questions/import", async (req, res) => {
+  const quizId = Number(req.params.quizId);
+  const { csvContent } = req.body;
 
+  if (!quizId) {
+    return res.status(400).json({ error: "Invalid quizId" });
+  }
+  if (!csvContent) {
+    return res.status(400).json({ error: "csvContent is required" });
+  }
+
+  try {
+    const records = parse(csvContent, {
+      columns: true,
+      delimiter: ";",
+      skip_empty_lines: true,
+      trim: true,
+    });
+
+    const errors = [];
+    let importedCount = 0;
+
+    const connection = await dbPool.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const [quizRows] = await connection.query(
+        "SELECT id FROM quizzes WHERE id = ?",
+        [quizId],
+      );
+      if (quizRows.length === 0) {
+        await connection.rollback();
+        connection.release();
+        return res.status(404).json({ error: "Quiz not found" });
+      }
+
+      for (let i = 0; i < records.length; i += 1) {
+        const row = records[i];
+        const lineNumber = i + 2; // +1 pour l'index, +1 pour l'en-tête
+
+        const type = (row.type || "").toUpperCase();
+        const text = row.question;
+        const category = row.category || null;
+        const level = row.level;
+
+        if (!text || !level || !["QCM", "TEXT"].includes(type)) {
+          errors.push({
+            line: lineNumber,
+            message: "Missing or invalid type/question/level",
+          });
+          continue;
+        }
+
+        let choices = [];
+        if (type === "QCM") {
+          const choiceFields = [
+            ["choice1", "isCorrect1"],
+            ["choice2", "isCorrect2"],
+            ["choice3", "isCorrect3"],
+            ["choice4", "isCorrect4"],
+          ];
+
+          for (const [choiceKey, correctKey] of choiceFields) {
+            const textChoice = row[choiceKey];
+            if (!textChoice) continue;
+            const isCorrectVal = String(row[correctKey] || "0").trim();
+            const isCorrect =
+              isCorrectVal === "1" || isCorrectVal.toLowerCase() === "true";
+            choices.push({ text: textChoice, isCorrect });
+          }
+
+          if (choices.length < 2) {
+            errors.push({
+              line: lineNumber,
+              message: "QCM must have at least 2 choices",
+            });
+            continue;
+          }
+
+          const correctCount = choices.filter((c) => c.isCorrect).length;
+          if (correctCount !== 1) {
+            errors.push({
+              line: lineNumber,
+              message: "QCM must have exactly one correct choice",
+            });
+            continue;
+          }
+        }
+
+        const [qResult] = await connection.query(
+          `
+          INSERT INTO questions (quiz_id, text, category, level, type)
+          VALUES (?, ?, ?, ?, ?)
+          `,
+          [quizId, text, category, level, type],
+        );
+        const questionId = qResult.insertId;
+
+        if (type === "QCM") {
+          for (const c of choices) {
+            await connection.query(
+              `
+              INSERT INTO choices (question_id, text, is_correct)
+              VALUES (?, ?, ?)
+              `,
+              [questionId, c.text, c.isCorrect ? 1 : 0],
+            );
+          }
+        }
+
+        importedCount += 1;
+      }
+
+      await connection.commit();
+      connection.release();
+
+      res.json({
+        importedCount,
+        errors,
+      });
+    } catch (err) {
+      await connection.rollback();
+      connection.release();
+      res.status(500).json({ error: err.message });
+    }
+  } catch (err) {
+    res.status(400).json({ error: "Invalid CSV format", details: err.message });
+  }
+});
 initDb()
   .then(() => {
     app.listen(PORT, () => {
