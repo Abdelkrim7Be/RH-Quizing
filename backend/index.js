@@ -533,6 +533,43 @@ L'équipe recrutement`,
   }
 });
 
+// RH: liste des candidats admis avec leur score et temps passé
+app.get("/rh/results", async (req, res) => {
+  try {
+    const [rows] = await dbPool.query(
+      `
+        SELECT
+          a.id AS attemptId,
+          c.full_name AS fullName,
+          c.email,
+          j.title AS jobTitle,
+          a.score_percent AS scorePercent,
+          a.duration_seconds AS durationSeconds,
+          a.completed_at AS completedAt
+        FROM quiz_attempts a
+        JOIN candidates c ON a.candidate_id = c.id
+        JOIN jobs j ON a.job_id = j.id
+        WHERE a.status = 'completed' AND a.score_percent >= 70
+        ORDER BY a.completed_at DESC
+      `,
+    );
+
+    res.json(
+      rows.map((r) => ({
+        attemptId: r.attemptId,
+        fullName: r.fullName,
+        email: r.email,
+        jobTitle: r.jobTitle,
+        scorePercent: Number(r.scorePercent),
+        durationSeconds: r.durationSeconds,
+        completedAt: r.completedAt,
+      })),
+    );
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/quiz/attempts/:attemptId/result", async (req, res) => {
   const attemptId = Number(req.params.attemptId);
   try {

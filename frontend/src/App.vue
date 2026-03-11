@@ -26,8 +26,15 @@
       <div class="quiz-header">
         <h2>{{ quiz?.name }}</h2>
         <div class="timer">
+<<<<<<< HEAD
           Temps écoulé :
           {{ minutesElapsed }}:{{ secondsElapsed.toString().padStart(2, "0") }}
+=======
+          Temps écoulé : {{ minutesElapsed }}{{
+            secondsElapsed.toString().padStart(2, "0")
+          }}
+          / {{ quiz?.durationMinutes }}:00
+>>>>>>> e81578af8da305805cb1296f2cf8c0bb0f7b8934
         </div>
       </div>
 
@@ -109,6 +116,10 @@ const answers = ref({});
 const result = ref(null);
 
 const elapsedSeconds = ref(0);
+<<<<<<< HEAD
+=======
+const timeLeftSeconds = ref(0);
+>>>>>>> e81578af8da305805cb1296f2cf8c0bb0f7b8934
 let timerInterval = null;
 
 const currentQuestion = computed(
@@ -174,13 +185,27 @@ async function startQuiz() {
   answers.value = {};
   currentIndex.value = 0;
   elapsedSeconds.value = 0;
+<<<<<<< HEAD
+=======
+  timeLeftSeconds.value = quiz.value.durationMinutes * 60;
+>>>>>>> e81578af8da305805cb1296f2cf8c0bb0f7b8934
   startTimer();
 }
 
 function startTimer() {
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
+<<<<<<< HEAD
     elapsedSeconds.value += 1;
+=======
+    if (timeLeftSeconds.value <= 0) {
+      clearInterval(timerInterval);
+      autoSubmitQuiz();
+    } else {
+      elapsedSeconds.value += 1;
+      timeLeftSeconds.value -= 1;
+    }
+>>>>>>> e81578af8da305805cb1296f2cf8c0bb0f7b8934
   }, 1000);
 }
 

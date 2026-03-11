@@ -4,5 +4,9 @@ Dockerfile
 docker-compose.yml
 .git
 .gitignore
+<<<<<<< HEAD
 .env
+=======
+dist
+>>>>>>> e81578af8da305805cb1296f2cf8c0bb0f7b8934
 
