@@ -298,6 +298,31 @@ app.post("/admin/jobs", async (req, res) => {
   }
 });
 
+app.get("/admin/jobs", async (req, res) => {
+  try {
+    const [rows] = await dbPool.query(
+      `
+      SELECT
+        j.id,
+        j.title,
+        j.created_at,
+        q.id AS quiz_id,
+        q.name AS quiz_name,
+        q.duration_minutes,
+        q.questions_count,
+        q.is_published
+      FROM jobs j
+      LEFT JOIN quizzes q
+        ON q.job_id = j.id
+      ORDER BY j.created_at DESC
+      `,
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post("/candidates", async (req, res) => {
   const { email, fullName } = req.body;
   if (!email || !fullName) {
