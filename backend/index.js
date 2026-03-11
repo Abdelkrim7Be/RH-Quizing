@@ -347,6 +347,35 @@ app.get("/admin/quizzes", async (req, res) => {
   }
 });
 
+app.get("/admin/quizzes/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) {
+    return res.status(400).json({ error: "Invalid quiz id" });
+  }
+  try {
+    const [rows] = await dbPool.query(
+      `
+      SELECT
+        q.id,
+        q.name,
+        q.duration_minutes,
+        q.questions_count,
+        q.is_published,
+        q.job_id
+      FROM quizzes q
+      WHERE q.id = ?
+      `,
+      [id],
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Quiz not found" });
+    }
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post("/candidates", async (req, res) => {
   const { email, fullName } = req.body;
   if (!email || !fullName) {
