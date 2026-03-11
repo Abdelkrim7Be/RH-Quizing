@@ -376,6 +376,8 @@ app.get("/admin/quizzes/:id", async (req, res) => {
   }
 });
 
+
+
 app.post("/candidates", async (req, res) => {
   const { email, fullName } = req.body;
   if (!email || !fullName) {
@@ -398,6 +400,49 @@ app.post("/candidates", async (req, res) => {
       [result.insertId],
     );
     res.status(201).json(created[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// Créer un quiz
+app.post("/admin/quizzes", async (req, res) => {
+  const { jobId, name, durationMinutes, questionsCount, isPublished } =
+    req.body;
+
+  if (!jobId || !name) {
+    return res.status(400).json({ error: "jobId and name are required" });
+  }
+
+  const duration = Number(durationMinutes || 30);
+  const qCount = Number(questionsCount || 10);
+  const published = isPublished ? 1 : 0;
+
+  try {
+    const [result] = await dbPool.query(
+      `
+      INSERT INTO quizzes (job_id, name, duration_minutes, questions_count, is_published)
+      VALUES (?, ?, ?, ?, ?)
+      `,
+      [jobId, name, duration, qCount, published],
+    );
+    const [rows] = await dbPool.query(
+      `
+      SELECT
+        id,
+        job_id,
+        name,
+        duration_minutes,
+        questions_count,
+        is_published,
+        created_at
+      FROM quizzes
+      WHERE id = ?
+      `,
+      [result.insertId],
+    );
+    res.status(201).json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
