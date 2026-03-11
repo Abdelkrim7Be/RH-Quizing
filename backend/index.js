@@ -322,7 +322,30 @@ app.get("/admin/jobs", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
+// Lister tous les quizzes (vue RH)
+app.get("/admin/quizzes", async (req, res) => {
+  try {
+    const [rows] = await dbPool.query(
+      `
+      SELECT
+        q.id,
+        q.name,
+        q.duration_minutes,
+        q.questions_count,
+        q.is_published,
+        q.created_at,
+        j.id AS job_id,
+        j.title AS job_title
+      FROM quizzes q
+      JOIN jobs j ON q.job_id = j.id
+      ORDER BY q.created_at DESC
+      `,
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 app.post("/candidates", async (req, res) => {
   const { email, fullName } = req.body;
   if (!email || !fullName) {
