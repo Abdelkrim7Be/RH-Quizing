@@ -1018,6 +1018,121 @@ app.post("/admin/quizzes/:quizId/questions", async (req, res) => {
   }
 });
 
+// Mettre à jour une question existante
+app.put("/admin/questions/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const { text, category, level, type, choices } = req.body;
+
+  if (!id) {
+    return res.status(400).json({ error: "Invalid question id" });
+  }
+
+  if (type && !["QCM", "TEXT"].includes(type)) {
+    return res.status(400).json({ error: "type must be QCM or TEXT" });
+  }
+
+  const connection = await dbPool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [existingRows] = await connection.query(
+      "SELECT * FROM questions WHERE id = ?",
+      [id],
+    );
+    if (existingRows.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: "Question not found" });
+    }
+    const existing = existingRows[0];
+
+    const newText = text || existing.text;
+    const newCategory = category !== undefined ? category : existing.category;
+    const newLevel = level || existing.level;
+    const newType = type || existing.type || "QCM";
+
+    if (newType === "QCM") {
+      if (!Array.isArray(choices) || choices.length < 2) {
+        return res
+          .status(400)
+          .json({ error: "QCM must have at least 2 choices" });
+      }
+      const correctCount = choices.filter((c) => c.isCorrect).length;
+      if (correctCount !== 1) {
+        return res.status(400).json({
+          error: "QCM must have exactly one correct choice",
+        });
+      }
+    }
+
+    await connection.query(
+      `
+      UPDATE questions
+      SET text = ?, category = ?, level = ?, type = ?
+      WHERE id = ?
+      `,
+      [newText, newCategory, newLevel, newType, id],
+    );
+
+    // Gérer les choix
+    await connection.query("DELETE FROM choices WHERE question_id = ?", [id]);
+
+    if (newType === "QCM") {
+      for (const c of choices) {
+        await connection.query(
+          `
+          INSERT INTO choices (question_id, text, is_correct)
+          VALUES (?, ?, ?)
+          `,
+          [id, c.text, c.isCorrect ? 1 : 0],
+        );
+      }
+    }
+
+    await connection.commit();
+
+    const [updatedRows] = await connection.query(
+      `
+      SELECT
+        id,
+        quiz_id,
+        text,
+        category,
+        level,
+        type,
+        created_at
+      FROM questions
+      WHERE id = ?
+      `,
+      [id],
+    );
+
+    const updated = updatedRows[0];
+    let updatedChoices = [];
+    if (newType === "QCM") {
+      const [rows] = await connection.query(
+        `
+        SELECT id, question_id, text, is_correct
+        FROM choices
+        WHERE question_id = ?
+        ORDER BY id ASC
+        `,
+        [id],
+      );
+      updatedChoices = rows;
+    }
+
+    res.json({
+      ...updated,
+      choices: updatedChoices,
+    });
+  } catch (err) {
+    await connection.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    connection.release();
+  }
+});
+
 initDb()
   .then(() => {
     app.listen(PORT, () => {
