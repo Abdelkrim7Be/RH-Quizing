@@ -522,6 +522,67 @@ app.delete("/admin/quizzes/:id", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+app.put("/admin/jobs/:jobId/quiz", async (req, res) => {
+  const jobId = Number(req.params.jobId);
+  const { quizId } = req.body;
+
+  if (!jobId || !quizId) {
+    return res.status(400).json({ error: "jobId and quizId are required" });
+  }
+
+  const connection = await dbPool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [jobRows] = await connection.query(
+      "SELECT * FROM jobs WHERE id = ?",
+      [jobId],
+    );
+    if (jobRows.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    const [quizRows] = await connection.query(
+      "SELECT * FROM quizzes WHERE id = ?",
+      [quizId],
+    );
+    if (quizRows.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: "Quiz not found" });
+    }
+
+    // Ici, on impose qu'un quiz est toujours lié à un job précis.
+    // Si on veut "remplacer", il suffit d'avoir un seul quiz publié pour ce job.
+    await connection.query(
+      `
+      UPDATE quizzes
+      SET is_published = 0
+      WHERE job_id = ? AND id <> ?
+      `,
+      [jobId, quizId],
+    );
+
+    await connection.query(
+      `
+      UPDATE quizzes
+      SET job_id = ?, is_published = 1
+      WHERE id = ?
+      `,
+      [jobId, quizId],
+    );
+
+    await connection.commit();
+
+    res.json({ jobId, quizId });
+  } catch (err) {
+    await connection.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    connection.release();
+  }
+});
 app.post("/quiz/start", async (req, res) => {
   const { candidateId, jobId } = req.body;
   if (!candidateId || !jobId) {
