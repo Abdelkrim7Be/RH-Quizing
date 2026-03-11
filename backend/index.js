@@ -502,7 +502,26 @@ app.put("/admin/quizzes/:id", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
+// Supprimer un quiz: on le dépublie
+app.delete("/admin/quizzes/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) {
+    return res.status(400).json({ error: "Invalid quiz id" });
+  }
+  try {
+    await dbPool.query(
+      `
+      UPDATE quizzes
+      SET is_published = 0
+      WHERE id = ?
+      `,
+      [id],
+    );
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 app.post("/quiz/start", async (req, res) => {
   const { candidateId, jobId } = req.body;
   if (!candidateId || !jobId) {
