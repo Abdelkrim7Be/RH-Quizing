@@ -7,6 +7,9 @@
         <button @click="loadResults" :disabled="loading">
           Rafraîchir
         </button>
+        <button @click="downloadCsv" :disabled="!results.length">
+          Exporter en CSV
+        </button>
         <span v-if="loading" class="hint">Chargement...</span>
         <span v-if="error" class="error">{{ error }}</span>
       </div>
@@ -14,16 +17,17 @@
       <table class="results-table" v-if="results.length">
         <thead>
           <tr>
-            <th>Candidat</th>
-            <th>Email</th>
-            <th>Poste</th>
-            <th>Score</th>
-            <th>Temps passé</th>
-            <th>Terminé le</th>
+            <th @click="setSort('fullName')">Candidat</th>
+            <th @click="setSort('email')">Email</th>
+            <th @click="setSort('jobTitle')">Poste</th>
+            <th @click="setSort('scorePercent')">Score</th>
+            <th @click="setSort('durationSeconds')">Temps passé</th>
+            <th @click="setSort('completedAt')">Terminé le</th>
+            <th @click="setSort('isAccepted')">Admis</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in results" :key="row.attemptId">
+          <tr v-for="row in sortedResults" :key="row.attemptId">
             <td>{{ row.fullName }}</td>
             <td>{{ row.email }}</td>
             <td>{{ row.jobTitle }}</td>
@@ -33,19 +37,20 @@
               {{ (row.durationSeconds || 0) % 60 }} s
             </td>
             <td>{{ formatDate(row.completedAt) }}</td>
+            <td>{{ row.isAccepted ? "Oui" : "Non" }}</td>
           </tr>
         </tbody>
       </table>
 
       <p v-else class="hint">
-        Aucun candidat admis pour le moment.
+        Aucun résultat pour le moment.
       </p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
@@ -53,6 +58,9 @@ const API_BASE_URL =
 const results = ref([]);
 const loading = ref(false);
 const error = ref("");
+
+const sortKey = ref("completedAt");
+const sortDir = ref("desc");
 
 async function loadResults() {
   loading.value = true;
@@ -80,6 +88,69 @@ function formatDate(value) {
 onMounted(() => {
   loadResults();
 });
+
+const sortedResults = computed(() => {
+  const list = [...results.value];
+  list.sort((a, b) => {
+    const dir = sortDir.value === "asc" ? 1 : -1;
+    const key = sortKey.value;
+    const va = a[key];
+    const vb = b[key];
+    if (va == null && vb == null) return 0;
+    if (va == null) return -1 * dir;
+    if (vb == null) return 1 * dir;
+    if (typeof va === "number" && typeof vb === "number") {
+      return va === vb ? 0 : va > vb ? dir : -dir;
+    }
+    const sa = String(va).toLowerCase();
+    const sb = String(vb).toLowerCase();
+    return sa === sb ? 0 : sa > sb ? dir : -dir;
+  });
+  return list;
+});
+
+function setSort(key) {
+  if (sortKey.value === key) {
+    sortDir.value = sortDir.value === "asc" ? "desc" : "asc";
+  } else {
+    sortKey.value = key;
+    sortDir.value = "asc";
+  }
+}
+
+function downloadCsv() {
+  if (!results.value.length) return;
+  const header = [
+    "fullName",
+    "email",
+    "jobTitle",
+    "scorePercent",
+    "durationSeconds",
+    "completedAt",
+    "isAccepted",
+  ];
+  const rows = results.value.map((r) =>
+    [
+      r.fullName,
+      r.email,
+      r.jobTitle,
+      r.scorePercent,
+      r.durationSeconds,
+      r.completedAt,
+      r.isAccepted ? "1" : "0",
+    ].join(";"),
+  );
+  const csv = [header.join(";"), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "rh_results.csv";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 </script>
 
 <style>
@@ -89,81 +160,69 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 2rem;
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-  background: linear-gradient(135deg, #0f172a, #1e293b);
-  color: #e5e7eb;
+  padding: 24px;
+  font-family: "Times New Roman", serif;
+  background: #ffffff;
+  color: #000000;
 }
 
 h1 {
-  margin-bottom: 1.5rem;
+  margin-bottom: 16px;
 }
 
 .card {
-  background: #020617;
-  border-radius: 1rem;
-  padding: 2rem;
+  background: #ffffff;
+  border: 1px solid #000000;
+  padding: 16px;
   width: 100%;
   max-width: 960px;
-  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.8);
 }
 
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 button {
-  background: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
-  padding: 0.6rem 1.2rem;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
+  padding: 6px 12px;
   cursor: pointer;
-  font-weight: 500;
 }
 
 button:disabled {
-  opacity: 0.6;
+  opacity: 0.7;
   cursor: not-allowed;
 }
 
 .error {
-  color: #f97373;
+  margin-left: 8px;
+  font-style: italic;
 }
 
 .hint {
   font-size: 0.9rem;
-  color: #9ca3af;
 }
 
 .results-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 1rem;
+  margin-top: 12px;
   font-size: 0.9rem;
 }
 
 .results-table th,
 .results-table td {
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #1f2937;
+  padding: 4px 6px;
+  border: 1px solid #000000;
 }
 
 .results-table th {
   text-align: left;
-  font-weight: 600;
-}
-
-.results-table tbody tr:hover {
-  background-color: #020617ee;
+  cursor: pointer;
 }
 </style>
 

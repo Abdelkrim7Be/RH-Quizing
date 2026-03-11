@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import mysql from "mysql2/promise";
 import nodemailer from "nodemailer";
+import { parse } from "csv-parse/sync";
 
 dotenv.config();
 
@@ -54,9 +55,16 @@ async function initDb() {
         text TEXT NOT NULL,
         category VARCHAR(100),
         level ENUM('junior','senior') NOT NULL,
+        type ENUM('QCM','TEXT') NOT NULL DEFAULT 'QCM',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
       )
+    `);
+
+    // Ajout de la colonne type si la table existait déjà sans ce champ
+    await connection.query(`
+      ALTER TABLE questions
+      ADD COLUMN IF NOT EXISTS type ENUM('QCM','TEXT') NOT NULL DEFAULT 'QCM'
     `);
 
     await connection.query(`
@@ -624,7 +632,7 @@ app.post("/quiz/start", async (req, res) => {
       `
         SELECT id, text, category, level
         FROM questions
-        WHERE quiz_id = ?
+        WHERE quiz_id = ? AND (type = 'QCM' OR type IS NULL)
         ORDER BY RAND()
         LIMIT ?
       `,
@@ -810,7 +818,6 @@ L'équipe recrutement`,
   }
 });
 
-// RH: liste des candidats admis avec leur score et temps passé
 app.get("/rh/results", async (req, res) => {
   try {
     const [rows] = await dbPool.query(
@@ -826,7 +833,7 @@ app.get("/rh/results", async (req, res) => {
         FROM quiz_attempts a
         JOIN candidates c ON a.candidate_id = c.id
         JOIN jobs j ON a.job_id = j.id
-        WHERE a.status = 'completed' AND a.score_percent >= 70
+        WHERE a.status = 'completed'
         ORDER BY a.completed_at DESC
       `,
     );
@@ -840,6 +847,7 @@ app.get("/rh/results", async (req, res) => {
         scorePercent: Number(r.scorePercent),
         durationSeconds: r.durationSeconds,
         completedAt: r.completedAt,
+        isAccepted: Number(r.scorePercent) >= 70,
       })),
     );
   } catch (err) {

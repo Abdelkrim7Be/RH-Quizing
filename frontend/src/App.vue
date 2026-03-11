@@ -4,10 +4,6 @@
 
     <div v-if="step === 'intro'" class="card">
       <h2>Informations candidat</h2>
-      <p class="hint">
-        Le poste vous a été attribué par l'équipe RH. Vous n'avez rien à
-        sélectionner ici.
-      </p>
       <form @submit.prevent="handleIntroSubmit">
         <div class="field">
           <label>Nom complet</label>
@@ -16,6 +12,15 @@
         <div class="field">
           <label>Email</label>
           <input v-model="email" type="email" required />
+        </div>
+        <div class="field">
+          <label>Poste</label>
+          <select v-model.number="selectedJobId" required>
+            <option disabled :value="0">-- Sélectionner un poste --</option>
+            <option v-for="job in jobs" :key="job.id" :value="job.id">
+              {{ job.title }}
+            </option>
+          </select>
         </div>
         <button type="submit" :disabled="loading">Commencer le quiz</button>
       </form>
@@ -26,15 +31,8 @@
       <div class="quiz-header">
         <h2>{{ quiz?.name }}</h2>
         <div class="timer">
-<<<<<<< HEAD
-          Temps écoulé :
-          {{ minutesElapsed }}:{{ secondsElapsed.toString().padStart(2, "0") }}
-=======
-          Temps écoulé : {{ minutesElapsed }}{{
-            secondsElapsed.toString().padStart(2, "0")
-          }}
-          / {{ quiz?.durationMinutes }}:00
->>>>>>> e81578af8da305805cb1296f2cf8c0bb0f7b8934
+          Temps restant :
+          {{ minutesLeft }}:{{ secondsLeft.toString().padStart(2, "0") }}
         </div>
       </div>
 
@@ -104,7 +102,7 @@ const error = ref("");
 const fullName = ref("");
 const email = ref("");
 const jobs = ref([]);
-const selectedJobId = ref(1);
+const selectedJobId = ref(0);
 
 const candidateId = ref(null);
 const attemptId = ref(null);
@@ -116,10 +114,7 @@ const answers = ref({});
 const result = ref(null);
 
 const elapsedSeconds = ref(0);
-<<<<<<< HEAD
-=======
 const timeLeftSeconds = ref(0);
->>>>>>> e81578af8da305805cb1296f2cf8c0bb0f7b8934
 let timerInterval = null;
 
 const currentQuestion = computed(
@@ -128,6 +123,8 @@ const currentQuestion = computed(
 
 const minutesElapsed = computed(() => Math.floor(elapsedSeconds.value / 60));
 const secondsElapsed = computed(() => elapsedSeconds.value % 60);
+const minutesLeft = computed(() => Math.floor(timeLeftSeconds.value / 60));
+const secondsLeft = computed(() => timeLeftSeconds.value % 60);
 
 const allAnswered = computed(() => {
   if (!questions.value.length) return false;
@@ -185,19 +182,13 @@ async function startQuiz() {
   answers.value = {};
   currentIndex.value = 0;
   elapsedSeconds.value = 0;
-<<<<<<< HEAD
-=======
   timeLeftSeconds.value = quiz.value.durationMinutes * 60;
->>>>>>> e81578af8da305805cb1296f2cf8c0bb0f7b8934
   startTimer();
 }
 
 function startTimer() {
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
-<<<<<<< HEAD
-    elapsedSeconds.value += 1;
-=======
     if (timeLeftSeconds.value <= 0) {
       clearInterval(timerInterval);
       autoSubmitQuiz();
@@ -205,12 +196,14 @@ function startTimer() {
       elapsedSeconds.value += 1;
       timeLeftSeconds.value -= 1;
     }
->>>>>>> e81578af8da305805cb1296f2cf8c0bb0f7b8934
   }, 1000);
 }
 
 async function handleIntroSubmit() {
-  if (!fullName.value || !email.value) return;
+  if (!fullName.value || !email.value || !selectedJobId.value) {
+    error.value = "Veuillez renseigner tous les champs.";
+    return;
+  }
   loading.value = true;
   error.value = "";
   try {
@@ -302,13 +295,9 @@ onUnmounted(() => {
   align-items: center;
   justify-content: flex-start;
   padding: 24px;
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    sans-serif;
-  background: #f5f5f5;
-  color: #111;
+  font-family: "Times New Roman", serif;
+  background: #ffffff;
+  color: #000000;
 }
 
 h1 {
@@ -316,12 +305,11 @@ h1 {
 }
 
 .card {
-  background: #fff;
-  border-radius: 8px;
+  background: #ffffff;
   padding: 20px;
   width: 100%;
   max-width: 600px;
-  border: 1px solid #ddd;
+  border: 1px solid #000000;
 }
 
 .field {
@@ -335,35 +323,34 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   padding: 8px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+  border: 1px solid #000000;
+  font-family: "Times New Roman", serif;
 }
 
 button {
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
   padding: 8px 16px;
   cursor: pointer;
 }
 
 button:disabled {
-  opacity: 0.6;
+  opacity: 0.7;
   cursor: not-allowed;
 }
 
 .error {
   margin-top: 8px;
-  color: #b91c1c;
+  font-style: italic;
 }
 
 .hint {
   margin-bottom: 12px;
   font-size: 0.9rem;
-  color: #555;
 }
 
 .quiz-header {
@@ -375,8 +362,7 @@ button:disabled {
 
 .timer {
   padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid #ddd;
+  border: 1px solid #000000;
   font-variant-numeric: tabular-nums;
   font-size: 0.9rem;
 }

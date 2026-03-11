@@ -1,10 +1,19 @@
 import { createApp } from "vue";
 import App from "./App.vue";
 import RhResults from "./RhResults.vue";
+import AdminQuizzes from "./AdminQuizzes.vue";
+import AdminQuestions from "./AdminQuestions.vue";
 
 const url = new URL(window.location.href);
-// Simple routing: /rh shows RH results page, everything else shows candidate quiz
-const isRh = url.pathname.startsWith("/rh");
+const path = url.pathname;
 
-const app = createApp(isRh ? RhResults : App);
-app.mount("#app");
+let RootComponent = App;
+if (path.startsWith("/rh")) {
+  RootComponent = RhResults;
+} else if (path.startsWith("/admin-quizzes")) {
+  RootComponent = AdminQuizzes;
+} else if (path.startsWith("/admin-questions")) {
+  RootComponent = AdminQuestions;
+}
+
+createApp(RootComponent).mount("#app");
