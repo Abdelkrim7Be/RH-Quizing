@@ -278,6 +278,25 @@ app.get("/jobs", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// Créer un nouveau poste
+app.post("/admin/jobs", async (req, res) => {
+  const { title } = req.body;
+  if (!title) {
+    return res.status(400).json({ error: "title is required" });
+  }
+  try {
+    const [result] = await dbPool.query("INSERT INTO jobs (title) VALUES (?)", [
+      title,
+    ]);
+    const [rows] = await dbPool.query(
+      "SELECT id, title, created_at FROM jobs WHERE id = ?",
+      [result.insertId],
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.post("/candidates", async (req, res) => {
   const { email, fullName } = req.body;

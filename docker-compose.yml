@@ -1,4 +1,4 @@
-version: "3.9"
+version: '3.8'
 
 services:
   mysql:
@@ -27,11 +27,6 @@ services:
       DB_USER: app_user
       DB_PASSWORD: app_password
       DB_NAME: scrum_rh_quiz
-      MAIL_HOST: ${MAIL_HOST:-}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USER: ${MAIL_USER:-}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
-      MAIL_FROM: ${MAIL_FROM:-}
     depends_on:
       - mysql
     ports:
@@ -48,6 +43,7 @@ services:
       - backend
     ports:
       - "5173:5173"
+   
 
 volumes:
   mysql_data:
