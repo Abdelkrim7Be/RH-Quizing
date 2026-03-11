@@ -376,8 +376,6 @@ app.get("/admin/quizzes/:id", async (req, res) => {
   }
 });
 
-
-
 app.post("/candidates", async (req, res) => {
   const { email, fullName } = req.body;
   if (!email || !fullName) {
@@ -404,7 +402,6 @@ app.post("/candidates", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // Créer un quiz
 app.post("/admin/quizzes", async (req, res) => {
@@ -443,6 +440,64 @@ app.post("/admin/quizzes", async (req, res) => {
       [result.insertId],
     );
     res.status(201).json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put("/admin/quizzes/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) {
+    return res.status(400).json({ error: "Invalid quiz id" });
+  }
+
+  const { name, durationMinutes, questionsCount, isPublished } = req.body;
+
+  try {
+    const [existingRows] = await dbPool.query(
+      "SELECT * FROM quizzes WHERE id = ?",
+      [id],
+    );
+    if (existingRows.length === 0) {
+      return res.status(404).json({ error: "Quiz not found" });
+    }
+
+    const existing = existingRows[0];
+    const newName = name || existing.name;
+    const newDuration = durationMinutes ?? existing.duration_minutes;
+    const newQCount = questionsCount ?? existing.questions_count;
+    const newPublished =
+      typeof isPublished === "boolean"
+        ? isPublished
+          ? 1
+          : 0
+        : existing.is_published;
+
+    await dbPool.query(
+      `
+      UPDATE quizzes
+      SET name = ?, duration_minutes = ?, questions_count = ?, is_published = ?
+      WHERE id = ?
+      `,
+      [newName, newDuration, newQCount, newPublished, id],
+    );
+
+    const [rows] = await dbPool.query(
+      `
+      SELECT
+        id,
+        job_id,
+        name,
+        duration_minutes,
+        questions_count,
+        is_published,
+        created_at
+      FROM quizzes
+      WHERE id = ?
+      `,
+      [id],
+    );
+    res.json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
