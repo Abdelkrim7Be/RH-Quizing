@@ -26,9 +26,10 @@
       <div class="quiz-header">
         <h2>{{ quiz?.name }}</h2>
         <div class="timer">
-          Temps restant : {{ minutesLeft }}:{{
-            secondsLeft.toString().padStart(2, "0")
+          Temps écoulé : {{ minutesElapsed }}{{
+            secondsElapsed.toString().padStart(2, "0")
           }}
+          / {{ quiz?.durationMinutes }}:00
         </div>
       </div>
 
@@ -75,7 +76,6 @@
       <h2>Résultat du quiz</h2>
       <p><strong>Poste :</strong> {{ result?.jobTitle }}</p>
       <p><strong>Score :</strong> {{ result?.scorePercent.toFixed(2) }} %</p>
-      <p><strong>Statut :</strong> {{ result?.status }}</p>
       <p>
         <strong>Temps passé :</strong>
         {{ Math.floor((result?.durationSeconds || 0) / 60) }} min
@@ -111,6 +111,7 @@ const answers = ref({});
 
 const result = ref(null);
 
+const elapsedSeconds = ref(0);
 const timeLeftSeconds = ref(0);
 let timerInterval = null;
 
@@ -118,8 +119,8 @@ const currentQuestion = computed(
   () => questions.value[currentIndex.value] || {},
 );
 
-const minutesLeft = computed(() => Math.floor(timeLeftSeconds.value / 60));
-const secondsLeft = computed(() => timeLeftSeconds.value % 60);
+const minutesElapsed = computed(() => Math.floor(elapsedSeconds.value / 60));
+const secondsElapsed = computed(() => elapsedSeconds.value % 60);
 
 const allAnswered = computed(() => {
   if (!questions.value.length) return false;
@@ -176,6 +177,7 @@ async function startQuiz() {
   questions.value = data.questions;
   answers.value = {};
   currentIndex.value = 0;
+  elapsedSeconds.value = 0;
   timeLeftSeconds.value = quiz.value.durationMinutes * 60;
   startTimer();
 }
@@ -187,6 +189,7 @@ function startTimer() {
       clearInterval(timerInterval);
       autoSubmitQuiz();
     } else {
+      elapsedSeconds.value += 1;
       timeLeftSeconds.value -= 1;
     }
   }, 1000);
